@@ -6,32 +6,46 @@ var userName = localStorage.getItem("userName");
 var password = localStorage.getItem("password");
 var accessToken = "";
 var userStats = [];
-var betValue = 1;
+var betValue = 32;
 var baseBet = localStorage.getItem("baseBet") || 1;
-var targetValue = 98;
-var selected = "amount";
+var targetValue =  localStorage.getItem("targetValue") || 50;
+var selected = "none";
 var index = 1;
 var oldIndex = 1;
 
 Settings.config(
   { url: 'www.stanica.ca/primedice.html' },
-  function(e) {
+    function(e) {
+      textfield.text("Login or register");
+      var position = new Vector2(0, 45);
+      textfield.position(position);
+       logonWindow.show();
+    },
+    function(e) {
+    
     var mode = JSON.parse(JSON.stringify(e.options)).mode;
     if (mode === "login"){
       userName = JSON.parse(JSON.stringify(e.options)).username;
       localStorage.setItem('userName', userName);
       password = JSON.parse(JSON.stringify(e.options)).password;  
       localStorage.setItem('password', password);
-      newLogonWindow.hide();
-      logonWindow.show();
+      accessToken = JSON.parse(JSON.stringify(e.options)).accessToken;  
     }
     else if (mode === "register"){
-      console.log("registering");
-    }
-    updateAccessToken();
-    // Show the raw response if parsing failed
+      userName = JSON.parse(JSON.stringify(e.options)).username;
+      localStorage.setItem('userName', userName);
+      password = JSON.parse(JSON.stringify(e.options)).password;  
+      localStorage.setItem('password', password);
+      accessToken = JSON.parse(JSON.stringify(e.options)).accessToken;
+    }  
+    getUserInfo("init");
+    logonWindow.hide();
+    menu.show();
+      
     if (e.failed) {
-      console.log(e.response);
+      if (!userName && password){
+        logonWindow.hide();
+      }
     }
   }
 );
@@ -120,14 +134,16 @@ var menu = new UI.Menu({
   sections: [{
     items: [{
       title: 'Bet',
-      icon: 'images/menu_icon.png',
+      icon: 'images/dice.png',
       subtitle: 'Place a bet'
     }, {
       title: 'User Info',
+      icon: 'images/info.png',
       subtitle: 'Get stats and info'
     },{
       title: 'Settings',
-      subtitle: 'Change default settings'
+      icon: 'images/gear.png',
+      subtitle: 'Extra settings'
     }]
   }]
 });
@@ -317,8 +333,8 @@ function initBetWindow(){
     font: 'gothic-18',
     text: betValue,
     textAlign: 'right',
-    color: 'white',
-    backgroundColor: 'black'
+    color: 'black',
+    borderColor: 'black'
   });
   var chanceText = new UI.Text({
     position: new Vector2(ctx,cty),
@@ -470,6 +486,7 @@ function initBetWindow(){
       chanceValue.backgroundColor('black');
       chanceValue.text(targetValue + "%");
       payoutValue.text((99 / targetValue).toFixed(3) + "x");
+      localStorage.setItem('targetValue', targetValue);
     }
     else {
       oldIndex = index;
@@ -519,6 +536,7 @@ function initBetWindow(){
       chanceValue.color('white');
       chanceValue.backgroundColor('black');
       payoutValue.text((99 / targetValue).toFixed(3) + "x");
+      localStorage.setItem('targetValue"', targetValue);
     }
     else {
       oldIndex = index;
@@ -568,6 +586,7 @@ function initBetWindow(){
       chanceValue.backgroundColor('black');
       chanceValue.text(targetValue + "%");
       payoutValue.text((99 / targetValue).toFixed(3) + "x");
+      localStorage.setItem('targetValue"', targetValue);
     }
   });
   betWindow.on('longClick','down',function(e){
@@ -587,6 +606,7 @@ function initBetWindow(){
       chanceValue.color('white');
       chanceValue.backgroundColor('black');
       payoutValue.text((99 / targetValue).toFixed(3) + "x");
+      localStorage.setItem('targetValue"', targetValue); 
     }
   });
   betWindow.on('longClick', 'select', function(e){
@@ -670,6 +690,5 @@ else {
   textfield.text("Login through app settings on your phone");
   var position = new Vector2(0, 35);
   textfield.position(position);
-  newLogonWindow.add(textfield);
-  newLogonWindow.show();
+  logonWindow.show();
 }

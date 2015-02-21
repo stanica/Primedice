@@ -29,6 +29,21 @@
                 "type": "font"
             },
             {
+                "file": "images/info.png",
+                "name": "IMAGES_INFO_PNG",
+                "type": "png"
+            },
+            {
+                "file": "images/gear.png",
+                "name": "IMAGES_GEAR_PNG",
+                "type": "png"
+            },
+            {
+                "file": "images/dice.png",
+                "name": "IMAGES_DICE_PNG",
+                "type": "png"
+            },
+            {
                 "file": "images/logo.png",
                 "menuIcon": true,
                 "name": "IMAGES_LOGO_PNG",
