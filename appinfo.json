@@ -29,6 +29,11 @@
                 "type": "font"
             },
             {
+                "file": "images/bot.png",
+                "name": "IMAGES_BOT_PNG",
+                "type": "png"
+            },
+            {
                 "file": "images/info.png",
                 "name": "IMAGES_INFO_PNG",
                 "type": "png"

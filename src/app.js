@@ -9,11 +9,11 @@ var accessToken = "";
 var userStats = [];
 var betValue = 1;
 var baseBet = localStorage.getItem('baseBet') || 1;
-var targetValue =  localStorage.getItem('targetValue') || 33;
+var targetValue =  localStorage.getItem('targetValue') || 49;
 var selected = 'none';
 var index = 1;
 var oldIndex = 1;
-var maxRolls = localStorage.getItem('maxRolls') || 200;
+var maxRolls = localStorage.getItem('maxRolls') || 500;
 maxRolls = maxRolls === '0' ? 0 : maxRolls;
 var onLossReturn = localStorage.getItem('onLossReturn') === 'True' ? true : false;
 var onLossIncreaseBy = localStorage.getItem('onLossIncreaseBy') || 0;
@@ -23,7 +23,7 @@ var botIndex = 1;
 var botOldIndex = 1;
 var botSelected = 'none';
 var botState = 'stopped';
-var botTargetValue = Number(localStorage.getItem('botTargetValue')) || 98;
+var botTargetValue = Number(localStorage.getItem('botTargetValue')) || 49;
 var lastBets = [];
 var currentRolls = 0;
 
@@ -52,7 +52,6 @@ Settings.config(
       localStorage.setItem('password', password);
       accessToken = JSON.parse(JSON.stringify(e.options)).accessToken;
     }  
-    getUserInfo("init");
     logonWindow.hide();
     menu.show();
       
@@ -98,6 +97,8 @@ function updateAccessToken() {
     },
     function(error) {
       // Failure!
+      errorMessage.text('Network issue. Try again.');
+      errorWindow.show();
       console.log('Failed fetching data: ' + error);
     }
   );
@@ -128,25 +129,32 @@ function getUserInfo(state){
         loadingWindow.hide();
         userStatsMenu.show();
       }
-      else if (state === 'showAutoBet'){
-        updateWallets(query.balance);
-        loadingWindow.hide();
-        autoBetWindow.show();
-      }
       else if(state === 'init'){
         initBetWindow();
         initBotSettings();
         initBaseBetSettings();
         initAutoBet();
       }
-      else if (state === 'baseBetWindow'){
-        updateWallets(query.balance);
+      else if (state === 'updateBetWallet'){
+        baseBetWalletText.text('Wallet: ' + getBTC(query.balance));
+        loadingWindow.hide();
+        betWindow.show();
+      }
+      else if (state === 'updateBotWallet'){
+        autoBetWalletText.text('Wallet: ' + getBTC(query.balance));
+        loadingWindow.hide();
+        autoBetWindow.show();
+      }
+      else if (state === 'updateBaseBetWallet'){
+        baseBetWalletText.text('Wallet: ' + getBTC(query.balance));
         loadingWindow.hide();
         setBaseBetWindow.show();
       }
     },
     function(error) {
       // Failure!
+      errorMessage.text('Network issue. Try again.');
+      errorWindow.show();
       console.log('Failed fetching data: ' + error);
     }
   );
@@ -161,16 +169,21 @@ function placeBet (amount, chance, state, callback){
     function(data) {
       // Success!
       console.log(data);
+      // Server will sometimes return null after placing a bet. Bet still goes through
+      // so the last bet needs to be retrieved before placing a new one.
       if (state === 'auto_bet' && JSON.parse(data).query.results === 'null' || JSON.parse(data).query.results === null){
         console.log('Server returned null');
         setTimeout(function(){
           getLastBets('null', callback);
         }, 2500);
       }
+      // Server will sometimes return nginx version after placing a bet. Bet does
+      // not go through so it needs to be placed again without decreasing counter.
       else if (JSON.parse(data).query.results.postresult.p === 'nginx/1.4.6 (Ubuntu)'){
         console.log('Server returned nginx version');
         setTimeout(function(){
-          getLastBets('null', callback);
+          currentRolls++;
+          placeBet(amount, chance, state, callback);
         }, 2500);
       }
       else {
@@ -210,12 +223,17 @@ function placeBet (amount, chance, state, callback){
     },
     function(error) {
       // Failure!
+      errorMessage.text('Network issue. Try again.');
+      errorWindow.show();
       console.log('Failed fetching data: ' + error);
     }
   );
 }
 
 function getLastBets(state, callback){
+  if (state === undefined){
+    state === 'normal';
+  }
    ajax(
     {
       url: "https://query.yahooapis.com/v1/public/yql?q=select%20*%20from%20html%20where%0Aurl%3D'https%3A%2F%2Fapi.primedice.com%2Fapi%2Fmybets%3Faccess_token%3D"+accessToken+"'%20%0Aand%20xpath%3D%22%2F%2Fp%22&format=json&callback=",
@@ -239,12 +257,13 @@ function getLastBets(state, callback){
         rollValue3.text((lastBets[2].profit/100000000).toFixed(8));
         betValue4.text('  ' + (lastBets[3].amount/100000000).toFixed(8));
         rollValue4.text((lastBets[3].profit/100000000).toFixed(8));
-        loadingWindow.hide();
-        autoBetWindow.show();
+        getUserInfo('updateBotWallet');
       }
     },
     function(error) {
       // Failure!
+      errorMessage.text('Network issue. Try again.');
+      errorWindow.show();
       console.log('Failed fetching data: ' + error);
     }
   );
@@ -257,7 +276,8 @@ var menu = new UI.Menu({
       icon: 'images/dice.png',
       subtitle: 'Place a bet'
     },{
-      title: 'Automatic Betting',
+      title: 'Auto Bet',
+      icon: 'images/bot.png',
       subtitle: 'Turn on the bot'
     },
     {
@@ -275,7 +295,8 @@ var menu = new UI.Menu({
 //Main menu
 menu.on('select', function(e) {
   if(e.itemIndex === 0){
-    betWindow.show();
+    loadingWindow.show();
+    getUserInfo('updateBetWallet');
   }
   else if (e.itemIndex === 1){
     loadingWindow.show();
@@ -570,6 +591,10 @@ function initAutoBet(){
       stopBot();
     }
   });
+  autoBetWindow.on('click', 'back',function(e){
+    stopBot();
+    autoBetWindow.hide();
+  });
 }
 
 //Set up settings menu
@@ -592,7 +617,7 @@ settingsMenu.on('select', function(e){
   }
   else if (e.itemIndex === 1){
     loadingWindow.show();
-    getUserInfo('baseBetWindow');
+    getUserInfo('updateBaseBetWallet');
   }
 });
 
@@ -1082,13 +1107,13 @@ function initBaseBetSettings(){
     color: 'black'
   });
   baseBetWalletText = new UI.Text({
-    position: new Vector2(-1,0),
-    size: new Vector2(146,24),
+    position: new Vector2(0,2),
+    size: new Vector2(144,24),
     font: 'gothic-18',
-    text: 'Wallet: ' + userStats[1].subtitle,
+    text: 'Wallet: ' + userStats[1].subtitle + ' BTC',
     textAlign: 'center',
-    color: 'black',
-    borderColor: 'black'
+    color: 'white',
+    backgroundColor: 'black'
   });
   var baseBetText = new UI.Text({
     position: new Vector2(0,110),
